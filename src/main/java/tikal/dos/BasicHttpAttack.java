@@ -19,11 +19,17 @@ public class BasicHttpAttack implements Attack {
 	private static final String CONTENT_TYPE = "application/json";
 
 	private final String USER_AGENT = "Mozilla/5.0";
+
 	
 	URL url;
+    AtomicCounter counter;
 	volatile boolean running = false;
-	
-	@Override
+
+    public BasicHttpAttack(AtomicCounter atomicCounter) {
+        this.counter = atomicCounter;
+    }
+
+    @Override
 	public void run() {
 		Random random = new Random();
 		running = true;
@@ -50,10 +56,12 @@ public class BasicHttpAttack implements Attack {
 				wr.close();
 				
 				int responseCode = con.getResponseCode();
-				System.out.println("\nSending 'POST' request to URL : " + url);
-				System.out.println("Post parameters : " + urlParameters);
-				System.out.println("Response Code : " + responseCode);
-		 
+                System.out.println("Num of Calls: " + counter.increment());
+//				System.out.println("\nSending 'POST' request to URL : " + url);
+//				System.out.println("Post parameters : " + urlParameters);
+//				System.out.println("Response Code : " + responseCode);
+		        con.disconnect();
+
 				//Sleep to prevent CPU hogging
 				try {
 					Thread.sleep(1);
