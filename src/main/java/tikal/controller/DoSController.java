@@ -47,6 +47,7 @@ public class DoSController {
 		for (Attack attack : ongoingAttacks) {
 			attack.stop();
 		}
+        System.out.println("Attack stopped");
 		return true;
 	}
 

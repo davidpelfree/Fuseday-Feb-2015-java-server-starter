@@ -3,7 +3,11 @@ package tikal.controller;
 import java.util.HashMap;
 import java.util.Map;
 
+import ch.hsr.geohash.GeoHash;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,27 +37,44 @@ public class CheckinController {
         checkin.setTimestamp(now);
 		System.out.println(checkin);
 
-        long nowAsSec = now % 1000;
+        final long nowAsSec = now / 1000;
 
-        long rpsKey = nowAsSec;
-        longRedisTemplate.<Long,Long>opsForHash().increment("meta", rpsKey, 1L);
+        longRedisTemplate.execute(new RedisCallback<Object>() {
+            @Override
+            public Object doInRedis(RedisConnection connection) throws DataAccessException {
+                // Increment requests per second
+                byte[] rpsKey = ("" + nowAsSec).getBytes();
+                connection.hIncrBy("RPS".getBytes(), rpsKey, 1);
+                connection.expire(rpsKey, 300);
+
+                // Calc Geo Hash
+                String area = GeoHash.withCharacterPrecision(checkin.getLatitude(), checkin.getLongitude(), 3).toBase32();
+//                connection.incr(("area:" + area + ":userCount").getBytes());
+                byte[] areaKey = "MM".getBytes();
+                connection.hIncrBy(areaKey, area.getBytes(), 1);
+                connection.expire(areaKey, 300);
+
+                // User to area
+                // TODO
+                return null;
+            }
+        });
 
 
-//        // Using set to set value
-//        String key = "user:" + checkin.getUserId();
-//        String value = checkin.getLatitude() + ":" + checkin.getLongitude() + ":" + checkin.getTimestamp();
-//        stringRedisTemplate.opsForValue().set(key, value);
-//        stringRedisTemplate.opsForValue().set("S", "Shyam");
-//
-//        //Fetch values from set
-//        System.out.println(stringRedisTemplate.opsForValue().get("R"));
-//        System.out.println(stringRedisTemplate.opsForValue().get("S"));
+
 
 		return true;
 	}
 
     @RequestMapping(value = "/keepAlive", method = RequestMethod.GET)
     public boolean keepAlive() {
+        longRedisTemplate.execute(new RedisCallback<Object>() {
+            @Override
+            public Object doInRedis(RedisConnection connection) throws DataAccessException {
+                connection.incr("keepAliveCount".getBytes());
+                return null;
+            }
+        });
         return true;
     }
 }
