@@ -18,4 +18,9 @@ public class CheckinController {
 		System.out.println(" - Num of Request: " + counter.increment());
 		return true;
 	}
+
+    @RequestMapping(value = "/keepAlive", method = RequestMethod.GET)
+    public boolean keepAlive() {
+        return true;
+    }
 }
